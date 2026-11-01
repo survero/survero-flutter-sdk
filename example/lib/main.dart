@@ -4,9 +4,9 @@ import 'package:survero/survero.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Survero SDK with your API key
+  // Initialize Survero SDK with your project PUBLIC key (pk_). Never use a secret key (sk_) in an app.
   await Survero.init(
-    apiKey: 'sk_live_your_api_key_here',
+    apiKey: 'pk_live_REPLACE_WITH_YOUR_PUBLIC_KEY',
     // For local development, point to your NestJS backend:
     baseUrl: 'http://localhost:4000/api/v1',
     appVersion: '1.0.0',

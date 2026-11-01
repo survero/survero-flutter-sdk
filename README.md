@@ -1,39 +1,43 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Survero Flutter SDK
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+In-app surveys for Flutter. The SDK fetches a survey configured in the Survero dashboard, shows it as a
+bottom sheet and sends the answer. Answers sent offline are queued and retried on the next `init`.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+## Install
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+```yaml
+dependencies:
+  survero: ^0.2.0
+```
 
-## Features
+## Keys
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+Create a **public key** (`pk_live_…`) in the dashboard (Settings → API Keys) and use it in the app.
+Public keys can only fetch surveys and send responses, so it is fine if someone extracts one from the app.
 
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+**Never ship a secret key (`sk_live_…`) in an app.** The API rejects them on SDK routes and `Survero.init`
+prints a warning.
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
 ```dart
-const like = 'sample';
+await Survero.init(
+  apiKey: 'pk_live_xxxxxxxx',
+  appVersion: '2.4.0', // optional, shown next to each response
+);
+
+// Anywhere with a BuildContext:
+await Survero.show(
+  context: context,
+  surveyId: '8b0f3c1e-…', // survey id from the dashboard
+  onComplete: (response) => debugPrint('rating ${response.rating}'),
+  onDismiss: () => debugPrint('dismissed'),
+);
 ```
 
-## Additional information
+The SDK never throws into your UI: if the survey can't be loaded or sent, it logs with `debugPrint` and returns.
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+## Local development
+
+Point the SDK at a local API with `baseUrl: 'http://localhost:4000/api/v1'` (Android emulator:
+`http://10.0.2.2:4000/api/v1`). See `example/`.

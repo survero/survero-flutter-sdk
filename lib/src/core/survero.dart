@@ -9,7 +9,8 @@ import 'survero_client.dart';
 ///
 /// ```dart
 /// // Initialize once in main.dart
-/// await Survero.init(apiKey: 'sk_live_xxxxxxxxxxxx');
+/// // Use the project PUBLIC key (pk_). Secret keys (sk_) never go in an app.
+/// await Survero.init(apiKey: 'pk_live_xxxxxxxxxxxx');
 ///
 /// // Show a survey anywhere
 /// Survero.show(
@@ -23,7 +24,7 @@ class Survero {
   static SurveroClient? _client;
   static String? _sessionId;
   static String? _appVersion;
-  static const String sdkVersion = '0.1.0';
+  static const String sdkVersion = '0.2.0';
 
   Survero._();
 
@@ -33,6 +34,13 @@ class Survero {
     String? baseUrl,
     String? appVersion,
   }) async {
+    if (apiKey.startsWith('sk_')) {
+      // Fail-soft: no se lanza, pero el servidor rechaza las sk_ en /sdk/* y la clave quedaría expuesta.
+      debugPrint(
+        'Survero: you passed a SECRET key (sk_). Apps must use the project PUBLIC key (pk_): '
+        'secret keys can be extracted from the app and the API rejects them on SDK routes.',
+      );
+    }
     _client = SurveroClient(
       apiKey: apiKey,
       baseUrl: baseUrl ?? 'https://api.survero.com/api/v1',
@@ -86,18 +94,14 @@ class Survero {
 
     if (result != null) {
       // Submit response
-      final payload = {
-        'surveyId': surveyId,
-        'rating': result.rating,
-        if (result.comment != null && result.comment!.isNotEmpty)
-          'comment': result.comment,
-        'deviceOs': deviceInfo.deviceOs,
-        'deviceModel': deviceInfo.deviceModel,
-        'appVersion': _appVersion,
-        'sdkVersion': sdkVersion,
-        'locale': deviceInfo.locale,
-        'sessionId': _sessionId,
-      };
+      final payload = buildResponsePayload(
+        surveyId: surveyId,
+        response: result,
+        device: deviceInfo,
+        appVersion: _appVersion,
+        sdkVersion: sdkVersion,
+        sessionId: _sessionId,
+      );
 
       try {
         await client.submitResponse(payload);
@@ -123,4 +127,28 @@ class Survero {
     _client = null;
     _sessionId = null;
   }
+}
+
+/// Cuerpo de `POST /sdk/responses` (contrato snake_case del API).
+@visibleForTesting
+Map<String, dynamic> buildResponsePayload({
+  required String surveyId,
+  required SurveroResponse response,
+  required DeviceMetadata device,
+  String? appVersion,
+  required String sdkVersion,
+  String? sessionId,
+}) {
+  final comment = response.comment?.trim();
+  return {
+    'survey_id': surveyId,
+    'rating': response.rating,
+    if (comment != null && comment.isNotEmpty) 'comment': comment,
+    'device_os': device.deviceOs,
+    'device_model': device.deviceModel,
+    'app_version': ?appVersion,
+    'sdk_version': sdkVersion,
+    'locale': device.locale,
+    'session_id': ?sessionId,
+  };
 }
