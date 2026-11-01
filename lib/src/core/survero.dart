@@ -1,38 +1,53 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/models.dart';
 import '../ui/star_rating_modal.dart';
 import '../utils/device_info_collector.dart';
 import 'survero_client.dart';
+import '../events/event_queue.dart';
+import '../events/identity_store.dart';
+import '../events/session_tracker.dart';
+import '../events/survero_event.dart';
+import '../events/tracker.dart';
 
-/// Main entry point for the Survero SDK.
+/// Punto de entrada del SDK.
 ///
 /// ```dart
-/// // Initialize once in main.dart
-/// // Use the project PUBLIC key (pk_). Secret keys (sk_) never go in an app.
-/// await Survero.init(apiKey: 'pk_live_xxxxxxxxxxxx');
+/// // Una vez, al arrancar. Clave PÚBLICA del proyecto (pk_); nunca una secreta (sk_) en una app.
+/// await Survero.init(apiKey: 'pk_live_xxxxxxxx', appVersion: '2.4.0');
 ///
-/// // Show a survey anywhere
-/// Survero.show(
-///   context: context,
-///   surveyId: 'survey_abc123',
-///   onComplete: (response) => print('Rating: ${response.rating}'),
-///   onDismiss: () => print('Dismissed'),
-/// );
+/// Survero.track('story_completed', {'story': 'abc', 'duration': 42});
+/// Survero.identify('user-123');            // al iniciar sesión
+/// Survero.setTraits({'plan': 'premium'});
+/// Survero.show(context: context, surveyId: '…');
 /// ```
+///
+/// Nada de esto lanza hacia la app: un evento o una encuesta nunca rompen la pantalla que los disparó.
 class Survero {
   static SurveroClient? _client;
-  static String? _sessionId;
+  static Tracker? _tracker;
+  static _LifecycleObserver? _observer;
   static String? _appVersion;
-  static const String sdkVersion = '0.2.0';
+  static const String sdkVersion = '0.3.0';
 
   Survero._();
 
-  /// Initialize the SDK. Call once at app startup.
+  static bool get isInitialized => _client != null;
+
+  /// Inicializa el SDK. Llamar una vez al arrancar.
+  ///
+  /// - [userId]: si la app ya conoce al usuario (equivale a llamar [identify]).
+  /// - [enableInDebug]: en builds debug los eventos NO se envían (solo log y sinks) salvo que sea true;
+  ///   así las reinstalaciones de QA no inflan los datos. Las encuestas funcionan siempre.
   static Future<void> init({
     required String apiKey,
     String? baseUrl,
     String? appVersion,
+    String? userId,
+    bool enableInDebug = false,
+    Duration flushInterval = const Duration(seconds: 15),
   }) async {
     if (apiKey.startsWith('sk_')) {
       // Fail-soft: no se lanza, pero el servidor rechaza las sk_ en /sdk/* y la clave quedaría expuesta.
@@ -41,29 +56,81 @@ class Survero {
         'secret keys can be extracted from the app and the API rejects them on SDK routes.',
       );
     }
-    _client = SurveroClient(
-      apiKey: apiKey,
-      baseUrl: baseUrl ?? 'https://api.survero.com/api/v1',
-    );
-    _sessionId = const Uuid().v4();
-    _appVersion = appVersion ?? 'unknown';
+    dispose();
+    final client = SurveroClient(apiKey: apiKey, baseUrl: baseUrl ?? 'https://api.survero.com/api/v1');
+    _client = client;
+    _appVersion = appVersion;
 
-    // Try to flush any offline responses from previous sessions
-    await _client!.flushOfflineQueue();
+    try {
+      final device = await DeviceInfoCollector.collect();
+      final tracker = Tracker(
+        client: client,
+        identity: IdentityStore(),
+        session: SessionTracker(),
+        queue: EventQueue(),
+        context: EventContext(
+          platform: DeviceInfoCollector.platformName(),
+          sdkVersion: 'flutter/$sdkVersion',
+          appVersion: appVersion,
+          locale: device.locale,
+          country: EventContext.countryFromLocale(device.locale),
+        ),
+        sendEnabled: !kDebugMode || enableInDebug,
+      );
+      _tracker = tracker;
+      await tracker.start(flushInterval: flushInterval);
+      if (userId != null) await tracker.identify(userId);
+      _observer = _LifecycleObserver(tracker);
+      WidgetsBinding.instance.addObserver(_observer!);
+      unawaited(tracker.flush());
+    } catch (e) {
+      debugPrint('Survero: event tracking unavailable: $e');
+    }
+
+    // Respuestas que no se pudieron enviar en sesiones anteriores.
+    unawaited(client.flushOfflineQueue().catchError((Object e) => debugPrint('Survero: $e')));
   }
 
-  /// Show a survey modal.
+  /// Registra un evento. Nombre en snake_case (≤ 40). Booleanos se envían como 0/1.
+  static Future<void> track(String name, [Map<String, Object?>? props]) async =>
+      _tracker?.track(name, props);
+
+  /// Registra una pantalla vista (evento `$screen` con `name`).
+  static Future<void> screen(String name, [Map<String, Object?>? props]) async => _tracker?.screen(name, props);
+
+  /// Asocia este dispositivo a un usuario de la app. No reescribe el historial: Survero resuelve la identidad
+  /// en lectura, así que lo que pasó antes del login queda atribuido al usuario.
+  static Future<void> identify(String userId) async => _tracker?.identify(userId);
+
+  /// Cierre de sesión: los eventos siguientes vuelven a ser anónimos.
+  static Future<void> reset() async => _tracker?.reset();
+
+  /// Traits del usuario (o del dispositivo, si aún no hay identify). `null` borra la clave.
+  static Future<void> setTraits(Map<String, Object?> traits) async => _tracker?.setTraits(traits);
+
+  static Future<void> setTrait(String key, Object? value) => setTraits({key: value});
+
+  /// Envía ya lo pendiente (también ocurre solo cada 15 s, al llegar a 20 eventos y al pasar a segundo plano).
+  static Future<void> flush() async => _tracker?.flush();
+
+  /// Reenvía cada evento a otra herramienta (p. ej. Firebase Analytics).
+  static void addSink(SurveroEventListener sink) => _tracker?.addSink(sink);
+
+  static void removeSink(SurveroEventListener sink) => _tracker?.removeSink(sink);
+
+  /// Muestra una encuesta.
   static Future<void> show({
     required BuildContext context,
     required String surveyId,
     void Function(SurveroResponse response)? onComplete,
     VoidCallback? onDismiss,
   }) async {
-    assert(_client != null, 'Survero.init() must be called before Survero.show()');
+    final client = _client;
+    if (client == null) {
+      debugPrint('Survero: call Survero.init() before Survero.show()');
+      return;
+    }
 
-    final client = _client!;
-
-    // Fetch survey config
     final SurveyConfig config;
     try {
       config = await client.getSurveyConfig(surveyId);
@@ -78,13 +145,9 @@ class Survero {
     }
 
     if (!context.mounted) return;
-
-    // Collect device info
     final deviceInfo = await DeviceInfoCollector.collect();
-
     if (!context.mounted) return;
 
-    // Show the modal
     final result = await showModalBottomSheet<SurveroResponse>(
       context: context,
       isScrollControlled: true,
@@ -93,14 +156,13 @@ class Survero {
     );
 
     if (result != null) {
-      // Submit response
       final payload = buildResponsePayload(
         surveyId: surveyId,
         response: result,
         device: deviceInfo,
         appVersion: _appVersion,
         sdkVersion: sdkVersion,
-        sessionId: _sessionId,
+        sessionId: _tracker?.session.sessionId,
       );
 
       try {
@@ -115,17 +177,38 @@ class Survero {
     }
   }
 
-  /// Clear cached survey configs.
-  static Future<void> clearCache() async {
-    // SharedPreferences keys are cleared individually by SurveroClient
-    debugPrint('Survero: Cache cleared');
-  }
+  /// Borra las configuraciones de encuesta cacheadas.
+  static Future<void> clearCache() async => _client?.clearCache();
 
-  /// Dispose the SDK client.
+  /// Libera el SDK (tests, cambio de proyecto). Los eventos pendientes siguen en disco.
   static void dispose() {
+    if (_observer != null) {
+      WidgetsBinding.instance.removeObserver(_observer!);
+      _observer = null;
+    }
+    _tracker?.dispose();
+    _tracker = null;
     _client?.dispose();
     _client = null;
-    _sessionId = null;
+  }
+}
+
+class _LifecycleObserver with WidgetsBindingObserver {
+  final Tracker tracker;
+  _LifecycleObserver(this.tracker);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        unawaited(tracker.onForeground());
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        unawaited(tracker.onBackground());
+      case AppLifecycleState.inactive:
+        break;
+    }
   }
 }
 

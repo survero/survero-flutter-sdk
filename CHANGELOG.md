@@ -1,3 +1,16 @@
+## 0.3.0
+
+* **Events:** `Survero.track`, `screen`, `flush`; automatic `$install`, `$session_started` and `$session_ended`
+  (30-minute inactivity); persistent `device_id`; context (platform, app version, locale, country) stamped on
+  every event. Batches of up to 100, sent every 15 s, at 20 queued events and when the app goes to background.
+* **Identity:** `Survero.identify`, `reset`, `setTraits` / `setTrait`. Retried if offline.
+* **Bridges:** `Survero.addSink` (forward events to other tools) and `SurveroSink` (plug Survero into an existing
+  analytics service).
+* **Debug builds don't send events** unless `enableInDebug: true`.
+* Offline queues capped at 100 items and purged after 7 days; responses retried with the same `Idempotency-Key`.
+* Survey config cache with a 1-hour TTL and ETag revalidation; `clearCache()` now works.
+* Web-safe device locale.
+
 ## 0.2.0
 
 * **Breaking (server side):** the SDK must be initialized with the project **public key** (`pk_live_…`).
