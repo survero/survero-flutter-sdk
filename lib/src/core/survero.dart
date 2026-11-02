@@ -11,6 +11,7 @@ import '../events/identity_store.dart';
 import '../events/session_tracker.dart';
 import '../events/survero_event.dart';
 import '../events/tracker.dart';
+import '../surveys/survero_surveys.dart';
 
 /// Punto de entrada del SDK.
 ///
@@ -30,7 +31,10 @@ class Survero {
   static Tracker? _tracker;
   static _LifecycleObserver? _observer;
   static String? _appVersion;
-  static const String sdkVersion = '0.3.0';
+  static const String sdkVersion = '0.4.0';
+
+  /// Encuestas v2: `Survero.surveys.show('sean-ellis')`, disparo automático por evento, tema y renderer propio.
+  static final SurveroSurveys surveys = SurveroSurveys.internal();
 
   Survero._();
 
@@ -79,6 +83,7 @@ class Survero {
       );
       _tracker = tracker;
       await tracker.start(flushInterval: flushInterval);
+      surveys.bind(tracker: tracker, client: client, context: tracker.context);
       if (userId != null) await tracker.identify(userId);
       _observer = _LifecycleObserver(tracker);
       WidgetsBinding.instance.addObserver(_observer!);
@@ -118,7 +123,8 @@ class Survero {
 
   static void removeSink(SurveroEventListener sink) => _tracker?.removeSink(sink);
 
-  /// Muestra una encuesta.
+  /// Encuesta de estrellas por id (API de 0.1–0.3). Para encuestas v2 usa [surveys]: `Survero.surveys.show(slug)`.
+  @Deprecated('Use Survero.surveys.show(slug): it applies eligibility rules and caps')
   static Future<void> show({
     required BuildContext context,
     required String surveyId,
@@ -186,6 +192,7 @@ class Survero {
       WidgetsBinding.instance.removeObserver(_observer!);
       _observer = null;
     }
+    surveys.unbind();
     _tracker?.dispose();
     _tracker = null;
     _client?.dispose();

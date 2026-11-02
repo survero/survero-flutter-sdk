@@ -74,6 +74,16 @@ class Tracker {
     }
   }
 
+  /// Eventos del sistema (`$survey_*`): solo para el propio SDK.
+  Future<void> trackSystem(String name, Map<String, Object?> props) async {
+    try {
+      await _touchSession(_now());
+      await _record(name, sanitizeProps(props));
+    } catch (e) {
+      debugPrint('Survero: track failed: $e');
+    }
+  }
+
   Future<void> screen(String name, [Map<String, Object?>? props]) async {
     try {
       await _touchSession(_now());
@@ -211,6 +221,10 @@ class Tracker {
     await queue.add(event);
   }
 
+  /// Envía una operación (identify, traits, exposición o respuesta de encuesta); sin red queda pendiente y se
+  /// reintenta en el próximo flush. Las respuestas son idempotentes en el servidor (una por identidad).
+  Future<void> sendOrKeep(Map<String, Object?> op) => _sendOrKeep(op);
+
   Future<void> _sendOrKeep(Map<String, Object?> op) async {
     if (!sendEnabled) {
       debugPrint('Survero (debug, not sent): ${op['op']}');
@@ -225,6 +239,9 @@ class Tracker {
   }
 
   Future<SendOutcome> _sendOp(Map<String, Object?> op) {
+    final body = Map<String, Object?>.from(op['body'] as Map? ?? const {});
+    if (op['op'] == 'exposure') return client.postExposure(op['survey_id'] as String, body);
+    if (op['op'] == 'survey_response') return client.postSurveyResponse(op['survey_id'] as String, body);
     if (op['op'] == 'identify') {
       return client.identify(deviceId: op['device_id'] as String, userId: op['user_id'] as String);
     }

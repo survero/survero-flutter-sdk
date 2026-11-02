@@ -1,3 +1,15 @@
+## 0.4.0
+
+* **Surveys v2:** `Survero.surveys.show(slug)` and automatic display when a tracked event is a survey trigger
+  (needs `Survero.surveys.attach(navigatorKey)`). Both go through the server gate (audience rules, caps, already
+  answered) plus local caps (1 impression / 7 days, 2 dismissals, answered).
+* `SurveySheet` paints `single_choice`, `emoji`, `star`, `nps` and `free_text`, with the follow-up in the same
+  sheet, server style + `SurveroTheme` + app theme, RTL, 44 pt targets and WCAG AA text contrast.
+* Headless mode: `Survero.surveys.renderer(...)`. Kill switch: `Survero.surveys.enabled(false)`.
+* Events: `$survey_gate_evaluated` (always, with reason), `$survey_shown`, `$survey_answered`, `$survey_dismissed`.
+* Responses and impressions are retried if offline.
+* `Survero.show(context:, surveyId:)` is deprecated.
+
 ## 0.3.0
 
 * **Events:** `Survero.track`, `screen`, `flush`; automatic `$install`, `$session_started` and `$session_ended`

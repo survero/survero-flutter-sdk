@@ -208,6 +208,71 @@ class SurveroClient {
   Future<SendOutcome> setTraits({required String deviceId, String? userId, required Map<String, Object?> traits}) =>
       _post('/sdk/traits', {'device_id': deviceId, 'user_id': ?userId, 'traits': traits});
 
+  // ───────────────────────── Encuestas v2 ─────────────────────────
+
+  static const triggersKey = 'survero_survey_triggers';
+
+  /// Eventos que pueden disparar una encuesta (caché 1 h + ETag). Sin red: la última lista conocida.
+  Future<Set<String>> getTriggers() async {
+    Map<String, dynamic>? cached;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(triggersKey);
+      if (raw != null) cached = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {}
+    Set<String> fromCache() => {...((cached?['triggers'] as List?) ?? const []).cast<String>()};
+
+    if (cached != null && _now().difference(DateTime.parse(cached['fetched_at'] as String)) < configTtl) {
+      return fromCache();
+    }
+    try {
+      final response = await _httpClient.get(
+        Uri.parse('$baseUrl/sdk/surveys/triggers'),
+        headers: {..._headers, if (cached?['etag'] != null) 'If-None-Match': cached!['etag'] as String},
+      );
+      List<dynamic>? triggers;
+      if (response.statusCode == 304 && cached != null) {
+        triggers = cached['triggers'] as List;
+      } else if (response.statusCode == 200) {
+        triggers = (jsonDecode(response.body) as Map)['triggers'] as List;
+      } else {
+        return fromCache();
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        triggersKey,
+        jsonEncode({
+          'triggers': triggers,
+          'etag': ?response.headers['etag'] ?? cached?['etag'],
+          'fetched_at': _now().toUtc().toIso8601String(),
+        }),
+      );
+      return {...triggers.cast<String>()};
+    } catch (_) {
+      return fromCache();
+    }
+  }
+
+  /// La puerta del servidor. Devuelve el JSON (`survey`, `reason`) o null sin red / con error.
+  Future<Map<String, dynamic>?> eligible(Map<String, String> query) async {
+    try {
+      final response = await _httpClient.get(
+        Uri.parse('$baseUrl/sdk/surveys/eligible').replace(queryParameters: query),
+        headers: _headers,
+      );
+      if (response.statusCode != 200) return null;
+      return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<SendOutcome> postExposure(String surveyId, Map<String, Object?> body) =>
+      _post('/sdk/surveys/$surveyId/exposure', body);
+
+  Future<SendOutcome> postSurveyResponse(String surveyId, Map<String, Object?> body) =>
+      _post('/sdk/surveys/$surveyId/response', body);
+
   Future<SendOutcome> _post(String path, Object body, {String? idempotencyKey}) async {
     try {
       final response = await _httpClient.post(

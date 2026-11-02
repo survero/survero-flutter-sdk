@@ -44,14 +44,41 @@ Survero.reset();
 // Forward every event to another tool (e.g. Firebase Analytics):
 Survero.addSink((event) => FirebaseAnalytics.instance.logEvent(name: event.name));
 
-// Anywhere with a BuildContext:
-await Survero.show(
-  context: context,
-  surveyId: '8b0f3c1e-…', // survey id from the dashboard
-  onComplete: (response) => debugPrint('rating ${response.rating}'),
-  onDismiss: () => debugPrint('dismissed'),
-);
 ```
+
+## Surveys
+
+Surveys are configured in the dashboard (type, question per language, trigger event, audience rules, caps). The SDK
+paints the sheet: your app has no survey widget.
+
+```dart
+final navigatorKey = GlobalKey<NavigatorState>();
+// MaterialApp(navigatorKey: navigatorKey, …)
+Survero.surveys.attach(navigatorKey);
+
+// Automatic: if a survey has trigger_event = story_completed and this user is eligible, it opens by itself.
+Survero.track('story_completed');
+
+// Manual, by slug. It goes through the same gate: audience rules, caps, already answered.
+final outcome = await Survero.surveys.show('sean-ellis', context: context);
+```
+
+- **Types:** `single_choice`, `emoji`, `star`, `nps`, `free_text`. One sheet, one tap; an optional follow-up
+  question appears in the same sheet.
+- **Language:** the server sends the copy already in the device language (fallback: same language → project
+  default → English → first available). Right-to-left languages are laid out RTL.
+- **Caps:** at most one survey impression every 7 days per device, never again after answering or after two
+  dismissals. The server applies its own caps and rules too.
+- **Every evaluation is tracked** as `$survey_gate_evaluated` with a `reason` (`shown`, `not_eligible`,
+  `cooldown`, `answered`, `dismissed_max`, `no_context`, `offline`…), so "why didn't the survey show?" has an answer.
+  Also `$survey_shown`, `$survey_answered`, `$survey_dismissed`.
+- **Style:** server style (dashboard) → `Survero.surveys.theme(SurveroTheme(...))` → your app theme
+  (light/dark, typography).
+- **Your own UI (headless):** `Survero.surveys.renderer((context, survey) async => SurveyOutcome.answered(...))`.
+  The SDK still records impressions, caps and events.
+- **Kill switch:** `Survero.surveys.enabled(false)`.
+
+`Survero.show(context:, surveyId:)` (star surveys by id) still works for apps on 0.1–0.3 and is deprecated.
 
 The SDK never throws into your UI: if the survey can't be loaded or sent, it logs with `debugPrint` and returns.
 
