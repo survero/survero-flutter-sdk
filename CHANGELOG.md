@@ -1,3 +1,8 @@
+## 0.4.1
+
+* Fix: a second `show`/trigger while a survey sheet is open (reason `busy`) no longer releases the gate held by the
+  first one, so a third call can no longer slip through while the sheet is still on screen.
+
 ## 0.4.0
 
 * **Surveys v2:** `Survero.surveys.show(slug)` and automatic display when a tracked event is a survey trigger

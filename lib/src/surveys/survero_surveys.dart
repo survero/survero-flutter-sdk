@@ -97,6 +97,8 @@ class SurveroSurveys {
       return null;
     }
     String? surveySlug = slug;
+    // Solo quien tomó la puerta la libera: un segundo intento que recibe `busy` no debe soltar la del primero.
+    var ownsBusy = false;
     Future<void> gate(String reason) =>
         tracker.trackSystem(r'$survey_gate_evaluated', {'survey': ?surveySlug, 'trigger': ?trigger, 'reason': reason});
 
@@ -110,6 +112,7 @@ class SurveroSurveys {
       if (local != null) return _skip(gate, local);
 
       _busy = true;
+      ownsBusy = true;
       // Las reglas cuentan eventos en el servidor: el evento disparador (y lo encolado) tiene que haber llegado.
       await tracker.flush();
       final ctx = _context!;
@@ -146,7 +149,7 @@ class SurveroSurveys {
       debugPrint('Survero: survey failed: $e');
       return null;
     } finally {
-      _busy = false;
+      if (ownsBusy) _busy = false;
     }
   }
 
