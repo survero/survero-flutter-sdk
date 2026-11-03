@@ -31,7 +31,7 @@ class Survero {
   static Tracker? _tracker;
   static _LifecycleObserver? _observer;
   static String? _appVersion;
-  static const String sdkVersion = '0.4.0';
+  static const String sdkVersion = '0.4.1';
 
   /// Encuestas v2: `Survero.surveys.show('sean-ellis')`, disparo automático por evento, tema y renderer propio.
   static final SurveroSurveys surveys = SurveroSurveys.internal();

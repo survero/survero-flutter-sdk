@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -193,5 +194,21 @@ void main() {
     expect(await surveys.show('matrix'), isNull);
     await tracker.flush();
     expect(api.named(r'$survey_gate_evaluated').single['props']['reason'], 'sdk_too_old');
+  });
+
+  testWidgets('un segundo intento mientras hay una hoja abierta da busy y no libera la puerta del primero', (tester) async {
+    await setup(tester);
+    final release = Completer<SurveyOutcome>();
+    surveys.renderer((context, survey) => release.future);
+    final first = surveys.show('sean-ellis');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(await surveys.show('sean-ellis'), isNull);
+    expect(await surveys.show('sean-ellis'), isNull);
+    release.complete(const SurveyOutcome.dismissed());
+    await first;
+    await tracker.flush();
+    expect(api.named(r'$survey_gate_evaluated').map((e) => e['props']['reason']), ['shown', 'busy', 'busy']);
+    expect(api.calls['/sdk/surveys/eligible'], hasLength(1));
   });
 }
