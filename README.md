@@ -92,6 +92,9 @@ final outcome = await Survero.surveys.show('sean-ellis', context: context);
   Also `$survey_shown`, `$survey_answered`, `$survey_dismissed`.
 - **Style:** server style (dashboard) → `Survero.surveys.theme(SurveroTheme(...))` → your app theme
   (light/dark, typography).
+  The primary color paints the selected answer and the buttons; the rest of the sheet follows the app theme.
+- **Navigation:** the sheet is a route on the attached navigator. Track the trigger event after your own navigation
+  settles (e.g. after `Navigator.pop`): a `pop` that runs once the sheet is open closes the sheet, not your screen.
 - **Your own UI (headless):** `Survero.surveys.renderer((context, survey) async => SurveyOutcome.answered(...))`.
   The SDK still records impressions, caps and events.
 - **Kill switch:** `Survero.surveys.enabled(false)`.
