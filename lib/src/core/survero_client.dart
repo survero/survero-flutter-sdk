@@ -133,8 +133,8 @@ class SurveroClient {
 
   // ───────────────────────── Respuestas ─────────────────────────
 
-  /// Sends a response with an Idempotency-Key. With no network (or 5xx/429) it is queued and retried in
-  /// [flushOfflineQueue] with the SAME key, so a retry never duplicates. A 4xx throws.
+  /// Sends a response with an Idempotency-Key. With no network (or 408/429/5xx) it is queued and retried in
+  /// [flushOfflineQueue] with the SAME key, so a retry never duplicates. Any other 4xx throws.
   Future<void> submitResponse(Map<String, dynamic> payload) async {
     final idempotencyKey = const Uuid().v4();
     final outcome = await _postResponse(payload, idempotencyKey);
