@@ -12,8 +12,11 @@ Everything is queued on disk when offline and retried. Nothing throws into your 
 
 ```yaml
 dependencies:
-  survero: ^0.2.0
+  survero: ^0.4.1
 ```
+
+Or let your agent do it: `npx survero init` in the app folder adds the package, writes `Survero.init` in
+`lib/main.dart` and tells you the one manual step (the navigator key for surveys).
 
 ## Keys
 
@@ -22,6 +25,21 @@ Public keys can only fetch surveys and send responses, so it is fine if someone 
 
 **Never ship a secret key (`sk_live_…`) in an app.** The API rejects them on SDK routes and `Survero.init`
 prints a warning.
+
+## `Survero.init` options
+
+| Option | Default | |
+|---|---|---|
+| `apiKey` | — | Project **public** key (`pk_…`). |
+| `appVersion` | — | Your app version (e.g. from `package_info_plus`): slice results by release. |
+| `userId` | — | Same as calling `identify` right after init. |
+| `enableInDebug` | `false` | Debug builds send nothing unless `true`. To test without committing it: `enableInDebug: const bool.fromEnvironment('SURVERO_DEBUG')` and `flutter run --dart-define=SURVERO_DEBUG=true`. |
+| `flushInterval` | 15 s | Events are batched; `await Survero.flush()` sends them now (useful in tests). |
+| `baseUrl` | Survero cloud | Self-hosting or a staging API (`…/api/v1`). |
+
+Reserved prop keys are dropped with a warning (they are columns): `platform`, `app_version`, `sdk_version`,
+`country`, `country_ip`, `locale`, `user_id`, `device_id`, `session_id`, `source`, `environment`, `event_id`,
+`event_name`, `client_ts`, `server_ts`, `project_id`, `identity`.
 
 ## Usage
 

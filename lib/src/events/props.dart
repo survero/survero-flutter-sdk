@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Nombres: snake_case ≤ 40, o un evento reservado del SDK (`$...`). Igual que el servidor.
 final eventNamePattern = RegExp(r'^[a-z][a-z0-9_]{0,39}$');
 final traitKeyPattern = RegExp(r'^[a-z][a-z0-9_]{0,39}$');
@@ -9,13 +11,24 @@ const reservedPropKeys = {
   'identity',
 };
 
+/// Reservadas ya avisadas: una vez por clave.
+final _warnedReserved = <String>{};
+
 /// Props listas para JSON: booleanos → 0/1 (principio 9), fechas → ISO, mapas/listas recursivos,
-/// el resto con toString(). Las claves reservadas se quitan (son columnas).
+/// el resto con toString(). Las claves reservadas se quitan (son columnas; el servidor rechazaría el evento) y se
+/// avisa una vez por clave: antes `source` desaparecía sin que nadie lo viera.
 Map<String, Object?> sanitizeProps(Map<String, Object?>? props) {
   if (props == null) return const {};
   final out = <String, Object?>{};
   props.forEach((key, value) {
-    if (reservedPropKeys.contains(key) || key.isEmpty || key.length > 64) return;
+    if (reservedPropKeys.contains(key)) {
+      if (_warnedReserved.add(key)) {
+        debugPrint('Survero: prop "$key" is reserved and was dropped (the SDK sets it, or it is a column). '
+            'Rename it. Reserved: ${reservedPropKeys.join(', ')}');
+      }
+      return;
+    }
+    if (key.isEmpty || key.length > 64) return;
     final clean = _sanitizeValue(value);
     if (clean != _drop) out[key] = clean;
   });
