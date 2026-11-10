@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Caps locales (SDK-014): como mucho una impresión cada [cooldown] para el dispositivo, dos descartes de una
-/// encuesta = nunca más, respondida = nunca más. El servidor tiene los suyos; estos evitan pedirle a la red algo
-/// que ya se sabe que no se va a mostrar, y protegen si el servidor no responde.
+/// Local caps (SDK-014): at most one impression every [cooldown] for the device, two dismissals of a
+/// survey = never again, answered = never again. The server has its own; these avoid asking the network for something
+/// that is already known not to be shown, and protect when the server does not respond.
 class LocalCaps {
   static const storageKey = 'survero_survey_caps';
 
@@ -31,14 +31,14 @@ class LocalCaps {
     } catch (_) {}
   }
 
-  /// Razón para no mostrar nada antes de preguntar al servidor (solo el cooldown se sabe sin conocer la encuesta).
+  /// Reason to show nothing before asking the server (only the cooldown is known without knowing the survey).
   Future<String?> blockBeforeServer() async {
     final last = (await _read())['last_shown_at'] as String?;
     if (last != null && _now().difference(DateTime.parse(last)) < cooldown) return 'cooldown';
     return null;
   }
 
-  /// Razón para no mostrar una encuesta concreta.
+  /// Reason not to show a specific survey.
   Future<String?> blockSurvey(String slug) async {
     final data = await _read();
     if ((data['answered'] as List).contains(slug)) return 'answered';

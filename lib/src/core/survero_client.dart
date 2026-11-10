@@ -6,14 +6,14 @@ import 'package:uuid/uuid.dart';
 
 import '../models/survey_config.dart';
 
-/// Resultado de enviar algo al API: si se confirmó, si hay que reintentar más tarde, o si se descarta.
+/// Result of sending something to the API: confirmed, retry later, or dropped.
 enum SendOutcome {
   sent,
 
-  /// Red caída, 5xx, 408 o 429: se reintenta.
+  /// Network down, 5xx, 408 or 429: retried.
   retry,
 
-  /// Otro 4xx: reintentarlo no lo arregla (clave inválida, payload rechazado…).
+  /// Any other 4xx: retrying will not fix it (invalid key, rejected payload…).
   drop,
 }
 
@@ -29,7 +29,7 @@ class SurveroClient {
   final http.Client _httpClient;
   final DateTime Function() _now;
 
-  /// Vigencia de la caché de configuración antes de revalidar con ETag (SDK-002).
+  /// How long the config cache is valid before revalidating with ETag (SDK-002).
   final Duration configTtl;
 
   static const cachePrefix = 'survero_survey_cache_';
@@ -53,8 +53,8 @@ class SurveroClient {
 
   // ───────────────────────── Encuestas ─────────────────────────
 
-  /// Configuración de una encuesta: caché fresca → sin red; caducada → revalida con If-None-Match (304 = sigue
-  /// valiendo); sin red → la caché caducada antes que nada (fail-soft).
+  /// A survey's configuration: fresh cache → no network; expired → revalidates with If-None-Match (304 = still
+  /// valid); no network → the expired cache rather than nothing (fail-soft).
   Future<SurveyConfig> getSurveyConfig(String surveyId) async {
     final cached = await _readCache(surveyId);
     if (cached != null && _now().difference(cached.fetchedAt) < configTtl) {
@@ -86,7 +86,7 @@ class SurveroClient {
     return SurveyConfig.fromJson(json);
   }
 
-  /// Borra todas las configuraciones cacheadas (SDK-001).
+  /// Deletes all cached configurations (SDK-001).
   Future<void> clearCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -133,8 +133,8 @@ class SurveroClient {
 
   // ───────────────────────── Respuestas ─────────────────────────
 
-  /// Envía una respuesta con Idempotency-Key. Sin red (o 5xx/429) se encola y se reintenta en
-  /// [flushOfflineQueue] con la MISMA clave, así un reintento nunca duplica. Un 4xx se lanza.
+  /// Sends a response with an Idempotency-Key. With no network (or 5xx/429) it is queued and retried in
+  /// [flushOfflineQueue] with the SAME key, so a retry never duplicates. A 4xx throws.
   Future<void> submitResponse(Map<String, dynamic> payload) async {
     final idempotencyKey = const Uuid().v4();
     final outcome = await _postResponse(payload, idempotencyKey);
@@ -162,7 +162,7 @@ class SurveroClient {
     }
   }
 
-  /// Reintenta las respuestas encoladas (SDK-003: máximo 100, se purgan a los 7 días).
+  /// Retries the queued responses (SDK-003: at most 100, purged after 7 days).
   Future<void> flushOfflineQueue() async {
     final prefs = await SharedPreferences.getInstance();
     final queue = _readQueue(prefs);
@@ -198,7 +198,7 @@ class SurveroClient {
 
   // ───────────────────────── Eventos e identidad ─────────────────────────
 
-  /// `POST /sdk/events` con un lote ya serializado. El servidor deduplica por event_id.
+  /// `POST /sdk/events` with an already serialized batch. The server deduplicates by event_id.
   Future<SendOutcome> postEvents(List<Map<String, Object?>> events) =>
       _post('/sdk/events', {'events': events}, idempotencyKey: events.isEmpty ? null : events.first['event_id'] as String?);
 
@@ -212,7 +212,7 @@ class SurveroClient {
 
   static const triggersKey = 'survero_survey_triggers';
 
-  /// Eventos que pueden disparar una encuesta (caché 1 h + ETag). Sin red: la última lista conocida.
+  /// Events that can trigger a survey (1 h cache + ETag). No network: the last known list.
   Future<Set<String>> getTriggers() async {
     Map<String, dynamic>? cached;
     try {
@@ -253,7 +253,7 @@ class SurveroClient {
     }
   }
 
-  /// La puerta del servidor. Devuelve el JSON (`survey`, `reason`) o null sin red / con error.
+  /// The server gate. Returns the JSON (`survey`, `reason`), or null with no network / on error.
   Future<Map<String, dynamic>?> eligible(Map<String, String> query) async {
     try {
       final response = await _httpClient.get(
@@ -311,7 +311,7 @@ class _QueuedResponse {
         'queued_at': queuedAt.toUtc().toIso8601String(),
       });
 
-  /// Acepta el formato 0.1 (solo el payload) y le asigna clave y fecha nuevas.
+  /// Accepts the 0.1 format (payload only) and assigns it a new key and date.
   static _QueuedResponse? decode(String raw, DateTime Function() now) {
     try {
       final json = Map<String, dynamic>.from(jsonDecode(raw) as Map);

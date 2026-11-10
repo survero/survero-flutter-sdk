@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// Un evento tal como lo registra el SDK (y lo reciben los sinks de [Survero.addSink]).
+/// An event as the SDK records it (and as the [Survero.addSink] sinks receive it).
 class SurveroEvent {
   final String eventId;
   final String name;
@@ -20,7 +20,7 @@ class SurveroEvent {
     this.sessionId,
   });
 
-  /// Cuerpo de un evento de `POST /sdk/events` con el contexto del dispositivo estampado como columnas.
+  /// Body of one `POST /sdk/events` event, with the device context stamped as columns.
   Map<String, Object?> toJson(EventContext context) => {
         'event_id': eventId,
         'event_name': name,
@@ -60,7 +60,7 @@ class SurveroEvent {
   String toString() => 'SurveroEvent($name ${jsonEncode(props)})';
 }
 
-/// Dimensiones de corte que el SDK estampa en cada evento (columnas en el servidor, nunca props).
+/// Breakdown dimensions the SDK stamps on every event (columns on the server, never props).
 class EventContext {
   final String platform;
   final String sdkVersion;
@@ -76,7 +76,7 @@ class EventContext {
     this.country,
   });
 
-  /// `es_CO` / `es-CO` → país `CO`. Es la región del locale, no geo por IP.
+  /// `es_CO` / `es-CO` → country `CO`. It is the locale's region, not IP geolocation.
   static String? countryFromLocale(String? locale) {
     if (locale == null) return null;
     final parts = locale.split(RegExp('[_-]'));

@@ -14,8 +14,8 @@ import 'survero_event.dart';
 
 typedef SurveroEventListener = void Function(SurveroEvent event);
 
-/// Núcleo de eventos del SDK (SDK-011): estampa identidad, sesión y contexto; encola; envía por lotes;
-/// reintenta identify/traits pendientes; y reenvía cada evento a los sinks. Nunca lanza hacia la app.
+/// The SDK's event core (SDK-011): stamps identity, session and context; queues; sends in batches;
+/// retries pending identify/traits; and forwards every event to the sinks. Never throws into the app.
 class Tracker {
   static const pendingKey = 'survero_pending_ops';
   static const batchSize = 100;
@@ -27,7 +27,7 @@ class Tracker {
   final EventContext context;
   final DateTime Function() _now;
 
-  /// false en builds debug salvo `enableInDebug`: los eventos se registran en log y sinks pero no se envían.
+  /// false in debug builds unless `enableInDebug`: events go to the log and sinks but are not sent.
   final bool sendEnabled;
   final int flushAt;
   final List<SurveroEventListener> _sinks = [];
@@ -45,7 +45,7 @@ class Tracker {
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
-  /// Carga identidad y sesión, emite `$install` en la primera apertura y abre sesión.
+  /// Loads identity and session, emits `$install` on first open and opens a session.
   Future<void> start({Duration? flushInterval = const Duration(seconds: 15)}) async {
     await identity.load();
     await session.load();
@@ -59,7 +59,7 @@ class Tracker {
   void addSink(SurveroEventListener sink) => _sinks.add(sink);
   void removeSink(SurveroEventListener sink) => _sinks.remove(sink);
 
-  /// Registra un evento de la app. Nombres inválidos se descartan con un aviso en debug (no lanza).
+  /// Records an app event. Invalid names are dropped with a warning in debug (does not throw).
   Future<void> track(String name, [Map<String, Object?>? props]) async {
     try {
       if (!eventNamePattern.hasMatch(name)) {
@@ -74,7 +74,7 @@ class Tracker {
     }
   }
 
-  /// Eventos del sistema (`$survey_*`): solo para el propio SDK.
+  /// System events (`$survey_*`): for the SDK itself only.
   Future<void> trackSystem(String name, Map<String, Object?> props) async {
     try {
       await _touchSession(_now());
@@ -93,7 +93,7 @@ class Tracker {
     }
   }
 
-  /// Alias device → usuario (no reescribe eventos). Los eventos siguientes llevan el user_id.
+  /// Device → user alias (does not rewrite events). Subsequent events carry the user_id.
   Future<void> identify(String userId) async {
     try {
       final id = userId.trim();
@@ -106,14 +106,14 @@ class Tracker {
     }
   }
 
-  /// Cierre de sesión en la app: los eventos siguientes vuelven a ser anónimos (mismo device_id).
+  /// App logout: subsequent events are anonymous again (same device_id).
   Future<void> reset() async {
     try {
       await identity.setUserId(null);
     } catch (_) {}
   }
 
-  /// Traits de la identidad actual (user_id si se conoce, si no el device). Valor null borra la clave.
+  /// Traits of the current identity (user_id if known, otherwise the device). A null value deletes the key.
   Future<void> setTraits(Map<String, Object?> traits) async {
     try {
       final clean = <String, Object?>{};
@@ -142,8 +142,8 @@ class Tracker {
     }
   }
 
-  /// Envía lo pendiente: operaciones de identidad primero (el alias antes que los eventos), luego eventos en
-  /// lotes de 100. Llamadas concurrentes comparten el mismo envío.
+  /// Sends pending data: identity operations first (the alias before the events), then events in
+  /// batches of 100. Concurrent calls share the same send.
   Future<void> flush() {
     return _flushing ??= _flush().whenComplete(() => _flushing = null);
   }
@@ -165,7 +165,7 @@ class Tracker {
     }
   }
 
-  /// La app pasa a segundo plano: se guarda la última actividad y se intenta enviar.
+  /// The app goes to background: the last activity is saved and a send is attempted.
   Future<void> onBackground() async {
     try {
       await session.keepAlive(_now());
@@ -173,7 +173,7 @@ class Tracker {
     await flush();
   }
 
-  /// La app vuelve: si pasaron más de 30 min, se cierra la sesión anterior y se abre otra.
+  /// The app comes back: if more than 30 min passed, the previous session is closed and a new one opened.
   Future<void> onForeground() => _touchSession(_now());
 
   void dispose() {
@@ -221,8 +221,8 @@ class Tracker {
     await queue.add(event);
   }
 
-  /// Envía una operación (identify, traits, exposición o respuesta de encuesta); sin red queda pendiente y se
-  /// reintenta en el próximo flush. Las respuestas son idempotentes en el servidor (una por identidad).
+  /// Sends an operation (identify, traits, survey exposure or response); with no network it stays pending and is
+  /// retried on the next flush. Responses are idempotent on the server (one per identity).
   Future<void> sendOrKeep(Map<String, Object?> op) => _sendOrKeep(op);
 
   Future<void> _sendOrKeep(Map<String, Object?> op) async {

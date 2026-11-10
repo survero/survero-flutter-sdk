@@ -1,14 +1,14 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Transición de sesión que el tracker convierte en eventos.
+/// Session transition the tracker turns into events.
 class SessionChange {
-  /// Sesión que terminó (para `$session_ended`), si la había.
+  /// Session that ended (for `$session_ended`), if any.
   final String? endedSessionId;
   final DateTime? endedAt;
   final Duration? endedDuration;
 
-  /// Sesión que empieza (para `$session_started`).
+  /// Session that starts (for `$session_started`).
   final String startedSessionId;
 
   const SessionChange({
@@ -19,8 +19,8 @@ class SessionChange {
   });
 }
 
-/// Sesiones por inactividad (por defecto 30 min, como Shadow English). Persistida: una app que se reabre a los
-/// 5 minutos sigue en la misma sesión aunque el proceso haya muerto.
+/// Inactivity-based sessions (30 min by default, like Shadow English). Persisted: an app reopened after
+/// 5 minutes stays in the same session even if the process died.
 class SessionTracker {
   static const _idKey = 'survero_session_id';
   static const _startKey = 'survero_session_start';
@@ -47,8 +47,8 @@ class SessionTracker {
     } catch (_) {}
   }
 
-  /// Registra actividad en [now]. Si no hay sesión o pasó [timeout] desde la última actividad, abre una nueva
-  /// y devuelve el cambio (con la anterior cerrada en su última actividad).
+  /// Records activity at [now]. If there is no session or [timeout] passed since the last activity, opens a new one
+  /// and returns the change (with the previous one closed at its last activity).
   Future<SessionChange?> touch(DateTime now) async {
     SessionChange? change;
     if (_id == null || _last == null || now.difference(_last!) > timeout) {
@@ -71,7 +71,7 @@ class SessionTracker {
     return change;
   }
 
-  /// Marca actividad sin abrir sesión nueva (al pasar a segundo plano).
+  /// Marks activity without opening a new session (when going to background).
   Future<void> keepAlive(DateTime now) async {
     if (_id == null) return;
     _last = now;

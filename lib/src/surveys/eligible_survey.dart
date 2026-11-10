@@ -1,9 +1,10 @@
-/// Encuesta que la puerta del servidor decidió mostrar, con el copy ya en un idioma (el widget no sabe de idiomas).
+/// A survey the server gate decided to show, with the copy already in one language (the widget does not know
+/// about languages).
 class EligibleSurvey {
   final String id;
   final String slug;
 
-  /// `single_choice`, `star`, `nps`, `emoji` o `free_text`: decide el renderer.
+  /// `single_choice`, `star`, `nps`, `emoji` or `free_text`: picks the renderer.
   final String type;
   final String? triggerEvent;
   final String locale;
@@ -12,7 +13,7 @@ class EligibleSurvey {
   final SurveyFollowup? followup;
   final String? submitLabel;
 
-  /// Escala de `star` (1..maxStars) y `nps` (0..10).
+  /// Scale for `star` (1..maxStars) and `nps` (0..10).
   final int? scaleMin;
   final int? scaleMax;
   final SurveyServerStyle style;
@@ -32,7 +33,7 @@ class EligibleSurvey {
     this.style = const SurveyServerStyle(),
   });
 
-  /// Tipos que sabe pintar esta versión del SDK (se envían al servidor; uno nuevo → `sdk_too_old`).
+  /// Types this SDK version can render (sent to the server; a new one → `sdk_too_old`).
   static const supportedTypes = ['single_choice', 'star', 'nps', 'emoji', 'free_text'];
 
   factory EligibleSurvey.fromJson(Map<String, dynamic> json) {
@@ -68,11 +69,11 @@ class EligibleSurvey {
     );
   }
 
-  /// Si el follow-up aplica tras esta respuesta (sin `for_keys` = siempre).
+  /// Whether the follow-up applies after this answer (no `for_keys` = always).
   bool followupFor(String answerKey) =>
       followup != null && (followup!.forKeys.isEmpty || followup!.forKeys.contains(answerKey));
 
-  /// Idiomas que se escriben de derecha a izquierda.
+  /// Languages written right to left.
   bool get isRtl => const {'ar', 'he', 'fa', 'ur', 'ps', 'yi'}.contains(locale.split(RegExp('[-_]')).first);
 }
 
@@ -90,7 +91,7 @@ class SurveyFollowup {
   const SurveyFollowup({required this.prompt, this.placeholder, this.forKeys = const []});
 }
 
-/// Estilo que manda el servidor (editable en el dashboard).
+/// Style sent by the server (editable in the dashboard).
 class SurveyServerStyle {
   final String? primaryColor;
   final String? fontFamily;
@@ -104,18 +105,18 @@ class SurveyServerStyle {
       );
 }
 
-/// Respuesta de una encuesta: la clave estable de la opción, el valor de la escala y/o texto libre.
+/// A survey answer: the option's stable key, the scale value and/or free text.
 class SurveyAnswer {
   final String? answerKey;
   final int? value;
   final String? freeText;
   const SurveyAnswer({this.answerKey, this.value, this.freeText});
 
-  /// Clave que se emite en `$survey_answered` y se guarda en el servidor.
+  /// Key emitted in `$survey_answered` and stored on the server.
   String get key => answerKey ?? (value?.toString() ?? 'text');
 }
 
-/// Lo que devuelve un renderer: respondida o descartada.
+/// What a renderer returns: answered or dismissed.
 sealed class SurveyOutcome {
   const SurveyOutcome();
   const factory SurveyOutcome.answered(SurveyAnswer answer) = SurveyAnswered;

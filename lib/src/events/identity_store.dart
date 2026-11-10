@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// `device_id` persistente por instalación y `user_id` de la app (tras [Survero.identify]).
+/// Persistent per-install `device_id` and the app's `user_id` (after [Survero.identify]).
 class IdentityStore {
   static const deviceKey = 'survero_device_id';
   static const userKey = 'survero_user_id';
@@ -9,7 +9,7 @@ class IdentityStore {
   late String deviceId;
   String? userId;
 
-  /// true si el device_id se acaba de crear (primera apertura tras instalar → `$install`).
+  /// true if the device_id was just created (first open after install → `$install`).
   bool isNewInstall = false;
 
   Future<void> load() async {

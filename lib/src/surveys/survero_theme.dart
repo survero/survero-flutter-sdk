@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../utils/color_utils.dart';
 import 'eligible_survey.dart';
 
-/// Override local del estilo de la hoja. Capas (consultoría §4.7 regla 3):
-/// estilo del servidor → [SurveroTheme] → tema de la app (`Theme.of`): brillo, colores de superficie, tipografía.
+/// Local override of the sheet style. Layers (consulting §4.7 rule 3):
+/// server style → [SurveroTheme] → app theme (`Theme.of`): brightness, surface colors, typography.
 class SurveroTheme {
   final Color? primaryColor;
   final Color? backgroundColor;
@@ -15,7 +15,7 @@ class SurveroTheme {
   const SurveroTheme({this.primaryColor, this.backgroundColor, this.textColor, this.borderRadius, this.fontFamily});
 }
 
-/// Estilo final que usa el widget.
+/// Final style used by the widget.
 class ResolvedSurveyStyle {
   final Color primary;
   final Color onPrimary;

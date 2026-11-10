@@ -13,19 +13,19 @@ import '../events/survero_event.dart';
 import '../events/tracker.dart';
 import '../surveys/survero_surveys.dart';
 
-/// Punto de entrada del SDK.
+/// SDK entry point.
 ///
 /// ```dart
-/// // Una vez, al arrancar. Clave PÚBLICA del proyecto (pk_); nunca una secreta (sk_) en una app.
+/// // Once, at startup. The project's PUBLIC key (pk_); never a secret key (sk_) in an app.
 /// await Survero.init(apiKey: 'pk_live_xxxxxxxx', appVersion: '2.4.0');
 ///
 /// Survero.track('story_completed', {'story': 'abc', 'duration': 42});
-/// Survero.identify('user-123');            // al iniciar sesión
+/// Survero.identify('user-123');            // on login
 /// Survero.setTraits({'plan': 'premium'});
 /// Survero.show(context: context, surveyId: '…');
 /// ```
 ///
-/// Nada de esto lanza hacia la app: un evento o una encuesta nunca rompen la pantalla que los disparó.
+/// None of this throws into the app: an event or a survey never breaks the screen that triggered it.
 class Survero {
   static SurveroClient? _client;
   static Tracker? _tracker;
@@ -33,18 +33,18 @@ class Survero {
   static String? _appVersion;
   static const String sdkVersion = '0.4.1';
 
-  /// Encuestas v2: `Survero.surveys.show('sean-ellis')`, disparo automático por evento, tema y renderer propio.
+  /// Surveys v2: `Survero.surveys.show('sean-ellis')`, automatic triggering by event, theme and custom renderer.
   static final SurveroSurveys surveys = SurveroSurveys.internal();
 
   Survero._();
 
   static bool get isInitialized => _client != null;
 
-  /// Inicializa el SDK. Llamar una vez al arrancar.
+  /// Initializes the SDK. Call it once at startup.
   ///
-  /// - [userId]: si la app ya conoce al usuario (equivale a llamar [identify]).
-  /// - [enableInDebug]: en builds debug los eventos NO se envían (solo log y sinks) salvo que sea true;
-  ///   así las reinstalaciones de QA no inflan los datos. Las encuestas funcionan siempre.
+  /// - [userId]: if the app already knows the user (same as calling [identify]).
+  /// - [enableInDebug]: in debug builds events are NOT sent (only log and sinks) unless this is true;
+  ///   so QA reinstalls do not inflate the data. Surveys always work.
   static Future<void> init({
     required String apiKey,
     String? baseUrl,
@@ -96,34 +96,34 @@ class Survero {
     unawaited(client.flushOfflineQueue().catchError((Object e) => debugPrint('Survero: $e')));
   }
 
-  /// Registra un evento. Nombre en snake_case (≤ 40). Booleanos se envían como 0/1.
+  /// Records an event. Name in snake_case (≤ 40). Booleans are sent as 0/1.
   static Future<void> track(String name, [Map<String, Object?>? props]) async =>
       _tracker?.track(name, props);
 
-  /// Registra una pantalla vista (evento `$screen` con `name`).
+  /// Records a screen view (`$screen` event with `name`).
   static Future<void> screen(String name, [Map<String, Object?>? props]) async => _tracker?.screen(name, props);
 
-  /// Asocia este dispositivo a un usuario de la app. No reescribe el historial: Survero resuelve la identidad
-  /// en lectura, así que lo que pasó antes del login queda atribuido al usuario.
+  /// Links this device to an app user. It does not rewrite history: Survero resolves identity
+  /// at read time, so what happened before login is attributed to the user.
   static Future<void> identify(String userId) async => _tracker?.identify(userId);
 
-  /// Cierre de sesión: los eventos siguientes vuelven a ser anónimos.
+  /// Logout: subsequent events are anonymous again.
   static Future<void> reset() async => _tracker?.reset();
 
-  /// Traits del usuario (o del dispositivo, si aún no hay identify). `null` borra la clave.
+  /// User traits (or device traits, if there is no identify yet). `null` deletes the key.
   static Future<void> setTraits(Map<String, Object?> traits) async => _tracker?.setTraits(traits);
 
   static Future<void> setTrait(String key, Object? value) => setTraits({key: value});
 
-  /// Envía ya lo pendiente (también ocurre solo cada 15 s, al llegar a 20 eventos y al pasar a segundo plano).
+  /// Sends pending data now (this also happens on its own every 15 s, at 20 events and when going to background).
   static Future<void> flush() async => _tracker?.flush();
 
-  /// Reenvía cada evento a otra herramienta (p. ej. Firebase Analytics).
+  /// Forwards every event to another tool (e.g. Firebase Analytics).
   static void addSink(SurveroEventListener sink) => _tracker?.addSink(sink);
 
   static void removeSink(SurveroEventListener sink) => _tracker?.removeSink(sink);
 
-  /// Encuesta de estrellas por id (API de 0.1–0.3). Para encuestas v2 usa [surveys]: `Survero.surveys.show(slug)`.
+  /// Star survey by id (0.1–0.3 API). For v2 surveys use [surveys]: `Survero.surveys.show(slug)`.
   @Deprecated('Use Survero.surveys.show(slug): it applies eligibility rules and caps')
   static Future<void> show({
     required BuildContext context,
@@ -183,10 +183,10 @@ class Survero {
     }
   }
 
-  /// Borra las configuraciones de encuesta cacheadas.
+  /// Deletes the cached survey configurations.
   static Future<void> clearCache() async => _client?.clearCache();
 
-  /// Libera el SDK (tests, cambio de proyecto). Los eventos pendientes siguen en disco.
+  /// Releases the SDK (tests, project switch). Pending events stay on disk.
   static void dispose() {
     if (_observer != null) {
       WidgetsBinding.instance.removeObserver(_observer!);
@@ -219,7 +219,7 @@ class _LifecycleObserver with WidgetsBindingObserver {
   }
 }
 
-/// Cuerpo de `POST /sdk/responses` (contrato snake_case del API).
+/// Body of `POST /sdk/responses` (the API's snake_case contract).
 @visibleForTesting
 Map<String, dynamic> buildResponsePayload({
   required String surveyId,

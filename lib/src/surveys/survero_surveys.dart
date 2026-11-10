@@ -11,13 +11,13 @@ import 'local_caps.dart';
 import 'survero_theme.dart';
 import 'survey_sheet.dart';
 
-/// Renderer propio (modo headless, SDK-015): recibe la encuesta ya localizada y devuelve respondida o descartada.
-/// El SDK sigue registrando impresiones, caps y eventos.
+/// Custom renderer (headless mode, SDK-015): receives the already localized survey and returns answered or dismissed.
+/// The SDK still records impressions, caps and events.
 typedef SurveyRenderer = Future<SurveyOutcome> Function(BuildContext context, EligibleSurvey survey);
 
-/// `Survero.surveys` (SDK-014). Manual (`show`) y automático (al llegar un evento disparador) pasan por la misma
-/// puerta: caps locales → puerta del servidor (reglas, caps, ya respondida). Cada evaluación emite
-/// `$survey_gate_evaluated {survey, trigger, reason}`, también cuando no se muestra nada (principio 5).
+/// `Survero.surveys` (SDK-014). Manual (`show`) and automatic (when a trigger event arrives) go through the same
+/// gate: local caps → server gate (rules, caps, already answered). Every evaluation emits
+/// `$survey_gate_evaluated {survey, trigger, reason}`, also when nothing is shown (principle 5).
 class SurveroSurveys {
   SurveroSurveys.internal();
 
@@ -34,20 +34,20 @@ class SurveroSurveys {
   bool _busy = false;
   SurveroEventListener? _sink;
 
-  /// Kill switch local. Por defecto `true` (lección del defecto local `false` que ganaba en arranque en frío).
+  /// Local kill switch. Defaults to `true` (lesson from the local `false` default that won on cold start).
   void enabled(bool value) => _enabled = value;
   bool get isEnabled => _enabled;
 
-  /// Override local del estilo del servidor.
+  /// Local override of the server style.
   void theme(SurveroTheme? value) => _theme = value;
 
-  /// Modo headless: la app pinta la encuesta.
+  /// Headless mode: the app renders the survey.
   void renderer(SurveyRenderer? value) => _renderer = value;
 
-  /// Navigator de la app: necesario para el disparo automático (no hay BuildContext en un `track()`).
+  /// The app's Navigator: required for automatic triggering (there is no BuildContext in a `track()`).
   void attach(GlobalKey<NavigatorState> navigatorKey) => _navigatorKey = navigatorKey;
 
-  /// Llamado por `Survero.init`.
+  /// Called by `Survero.init`.
   void bind({required Tracker tracker, required SurveroClient client, required EventContext context, LocalCaps? caps}) {
     if (_sink != null) _tracker?.removeSink(_sink!);
     _tracker = tracker;
@@ -69,18 +69,18 @@ class SurveroSurveys {
     _client = null;
   }
 
-  /// Recarga la lista de eventos que pueden disparar encuestas (caché 1 h con ETag).
+  /// Reloads the list of events that can trigger surveys (1 h cache with ETag).
   Future<void> refreshTriggers() async {
     try {
       _triggers = await _client?.getTriggers() ?? {};
     } catch (_) {}
   }
 
-  /// Muestra una encuesta por slug, si la identidad es elegible. No salta caps ni reglas.
+  /// Shows a survey by slug, if the identity is eligible. It does not skip caps or rules.
   Future<SurveyOutcome?> show(String slug, {BuildContext? context, Map<String, Object?>? props}) =>
       _run(slug: slug, trigger: null, context: context, props: props);
 
-  /// Evalúa las encuestas de un evento disparador (lo hace solo el SDK al hacer `track`; también se puede llamar).
+  /// Evaluates the surveys for a trigger event (the SDK does this on its own on `track`; it can also be called).
   Future<SurveyOutcome?> onTrigger(String event, {BuildContext? context, Map<String, Object?>? props}) =>
       _run(slug: null, trigger: event, context: context, props: props);
 

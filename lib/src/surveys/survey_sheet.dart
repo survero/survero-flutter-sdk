@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'eligible_survey.dart';
 import 'survero_theme.dart';
 
-/// La hoja de encuesta que pinta el SDK (SDK-013). Un renderer por `type`; una hoja, un tap; el follow-up se
-/// revela en la misma hoja. Devuelve el resultado por [onOutcome] (respondida o descartada).
+/// The survey sheet the SDK renders (SDK-013). One renderer per `type`; one sheet, one tap; the follow-up is
+/// revealed in the same sheet. Returns the result through [onOutcome] (answered or dismissed).
 class SurveySheet extends StatefulWidget {
   final EligibleSurvey survey;
   final SurveroTheme? theme;
@@ -19,7 +19,7 @@ class SurveySheet extends StatefulWidget {
 class _SurveySheetState extends State<SurveySheet> {
   final _text = TextEditingController();
 
-  /// Respuesta elegida que espera el follow-up (o el texto libre).
+  /// Chosen answer waiting for the follow-up (or the free text).
   SurveyAnswer? _pending;
   bool _done = false;
 
@@ -37,7 +37,7 @@ class _SurveySheetState extends State<SurveySheet> {
     widget.onOutcome(outcome);
   }
 
-  /// Un tap: si no hay follow-up para esa respuesta, se envía ya.
+  /// One tap: if there is no follow-up for that answer, it is sent right away.
   void _choose(SurveyAnswer answer) {
     if (survey.followupFor(answer.key)) {
       setState(() => _pending = answer);

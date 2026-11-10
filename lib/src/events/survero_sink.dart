@@ -1,7 +1,7 @@
 import '../core/survero.dart';
 
-/// Puente para apps que ya tienen su propio servicio de analítica (SDK-012): se llama desde ese servicio y
-/// reenvía a Survero sin tocar cada llamada de la app.
+/// Bridge for apps that already have their own analytics service (SDK-012): call it from that service and it
+/// forwards to Survero without touching every call in the app.
 ///
 /// ```dart
 /// final survero = SurveroSink(deny: {'debug_tap'});
@@ -11,14 +11,14 @@ import '../core/survero.dart';
 /// }
 /// ```
 ///
-/// Las claves que en Survero son columnas (platform, app_version, locale, user_id…) se quitan de props:
-/// el SDK ya las estampa en cada evento.
+/// Keys that are columns in Survero (platform, app_version, locale, user_id…) are removed from props:
+/// the SDK already stamps them on every event.
 class SurveroSink {
-  /// Si no es null, solo se reenvían estos nombres.
+  /// If not null, only these names are forwarded.
   final Set<String>? allow;
   final Set<String> deny;
 
-  /// Renombrado opcional (nombres de la app → nombres en Survero).
+  /// Optional renaming (app names → Survero names).
   final String Function(String name)? rename;
 
   const SurveroSink({this.allow, this.deny = const {}, this.rename});

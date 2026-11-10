@@ -5,7 +5,7 @@ class DeviceMetadata {
   final String deviceOs;
   final String deviceModel;
 
-  /// Etiqueta BCP 47 del idioma del sistema (`es-CO`).
+  /// BCP 47 tag of the system language (`es-CO`).
   final String locale;
 
   const DeviceMetadata({
@@ -18,7 +18,7 @@ class DeviceMetadata {
 class DeviceInfoCollector {
   static final _plugin = DeviceInfoPlugin();
 
-  /// Sin dart:io: funciona también en web.
+  /// No dart:io: also works on web.
   static String systemLocale() {
     try {
       return PlatformDispatcher.instance.locale.toLanguageTag();
@@ -27,7 +27,7 @@ class DeviceInfoCollector {
     }
   }
 
-  /// `ios`, `android`, `web`, `macos`, `windows`, `linux`… (columna platform de los eventos).
+  /// `ios`, `android`, `web`, `macos`, `windows`, `linux`… (the events' platform column).
   static String platformName() => kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase();
 
   static Future<DeviceMetadata> collect() async {

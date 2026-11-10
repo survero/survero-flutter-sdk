@@ -4,8 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'survero_event.dart';
 
-/// Cola persistente de eventos pendientes de enviar (SDK-003): como mucho [maxSize] (se descartan los más
-/// antiguos) y nada más viejo que [maxAge]. Sobrevive a reinicios de la app.
+/// Persistent queue of events waiting to be sent (SDK-003): at most [maxSize] (the oldest are
+/// dropped) and nothing older than [maxAge]. It survives app restarts.
 class EventQueue {
   static const storageKey = 'survero_event_queue';
 
@@ -58,7 +58,7 @@ class EventQueue {
     await _save();
   }
 
-  /// Los primeros [max] eventos, sin quitarlos (se quitan con [remove] cuando el servidor los confirma).
+  /// The first [max] events, without removing them (they are removed with [remove] when the server confirms them).
   Future<List<SurveroEvent>> peek(int max) async {
     await _load();
     _purge();
