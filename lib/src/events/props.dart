@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 final eventNamePattern = RegExp(r'^[a-z][a-z0-9_]{0,39}$');
 final traitKeyPattern = RegExp(r'^[a-z][a-z0-9_]{0,39}$');
 
-/// Keys that are columns on the server: inside props the event would be rejected.
+/// Keys the SDK sets itself or that are columns on the server: inside props the server would reject the event.
 const reservedPropKeys = {
   'platform', 'app_version', 'sdk_version', 'country', 'country_ip', 'locale', 'user_id', 'device_id',
   'session_id', 'source', 'environment', 'event_id', 'event_name', 'client_ts', 'server_ts', 'project_id',
