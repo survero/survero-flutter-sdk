@@ -103,13 +103,13 @@ class SurveroSurveys {
         tracker.trackSystem(r'$survey_gate_evaluated', {'survey': ?surveySlug, 'trigger': ?trigger, 'reason': reason});
 
     try {
-      if (!_enabled) return _skip(gate, 'disabled');
+      if (!_enabled) return await _skip(gate, 'disabled');
       // Sin dónde pintar no tiene sentido preguntar al servidor (p. ej. disparo automático sin attach()).
       final buildContext = context ?? _navigatorKey?.currentContext;
-      if (buildContext == null) return _skip(gate, 'no_context');
-      if (_busy) return _skip(gate, 'busy');
+      if (buildContext == null) return await _skip(gate, 'no_context');
+      if (_busy) return await _skip(gate, 'busy');
       final local = await _caps.blockBeforeServer();
-      if (local != null) return _skip(gate, local);
+      if (local != null) return await _skip(gate, local);
 
       _busy = true;
       ownsBusy = true;
@@ -127,20 +127,20 @@ class SurveroSurveys {
         'types': EligibleSurvey.supportedTypes.join(','),
         if (props != null && props.isNotEmpty) 'props': jsonEncode(props),
       });
-      if (result == null) return _skip(gate, 'offline');
+      if (result == null) return await _skip(gate, 'offline');
 
       final evaluated = (result['evaluated'] as List?) ?? const [];
       if (result['survey'] == null) {
         if (evaluated.isNotEmpty) surveySlug = (evaluated.last as Map)['slug'] as String?;
-        return _skip(gate, result['reason'] as String? ?? 'no_survey');
+        return await _skip(gate, result['reason'] as String? ?? 'no_survey');
       }
 
       final survey = EligibleSurvey.fromJson(Map<String, dynamic>.from(result['survey'] as Map));
       surveySlug = survey.slug;
       final blocked = await _caps.blockSurvey(survey.slug);
-      if (blocked != null) return _skip(gate, blocked);
+      if (blocked != null) return await _skip(gate, blocked);
 
-      if (!buildContext.mounted) return _skip(gate, 'no_context');
+      if (!buildContext.mounted) return await _skip(gate, 'no_context');
 
       await gate('shown');
       if (!buildContext.mounted) return null;
